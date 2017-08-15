@@ -91,10 +91,11 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface, function stri
 		return t.add_prescription(stub, args)
 	} else if function == "fill_prescription" { // called by pharmacist
 		return t.fill_prescription(stub, args)
-	} else if function == "set_user" { //change owner of a marble
-		res, err := t.set_user(stub, args) //lets make sure all open trades are still valid
-		return res, err
 	}
+	// else if function == "set_user" { //change owner of a marble
+	// 	res, err := t.set_user(stub, args) //lets make sure all open trades are still valid
+	// 	return res, err
+	// }
 
 	fmt.Println("invoke did not find func: " + function)
 
