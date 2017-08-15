@@ -251,29 +251,74 @@ func (t *SimpleChaincode) fill_prescription(stub shim.ChaincodeStubInterface, ar
 	fmt.Println("- Beginning of fill_prescription")
 	fmt.Println(args[0] + " - " + args[1])
 
-	// get task from blockchain
-	prescripAsBytes, err := stub.GetState(args[0])
-	if err != nil {
-		return nil, errors.New("Failed to get prescription")
-	}
+	////////////////////// 1) update prescription itself /////////////////////////////
+	// A: get prescription from blockchain				 						 /////
+	prescripAsBytes, err := stub.GetState(args[0]) // 							 /////
+	if err != nil {                                // 							 /////
+		return nil, errors.New("Failed to get prescription") // 				 /////
+	} // 																		 /////
+	//																			 /////
+	res := Prescription{}                 // 									 /////
+	json.Unmarshal(prescripAsBytes, &res) //un stringify it aka JSON.parse()     /////
+	//																			 /////
+	// B: set prescription to filled and include pharmacist						 /////
+	res.Filled = true                                //                          /////
+	fmt.Println("! set filled prescription to true") // 						 /////
+	fmt.Println(res)                                 // 						 /////
+	//																			 /////
+	res.Pharmacist = args[1]                     //        					     /////
+	fmt.Println("! set prescription pharmacist") // 							 /////
+	fmt.Println(res)                             // 							 /////
+	//																			 /////
+	// C: update prescription and push back into blockchain						 /////
+	newPrescripAsBytes, _ := json.Marshal(res) // 								 /////
+	//rewrite the prescription with id as key									 /////
+	err = stub.PutState(args[0], newPrescripAsBytes) // 						 /////
+	if err != nil {                                  // 						 /////
+		return nil, err // 														 /////
+	} // 																		 /////
+	//////////////////////////////////////////////////////////////////////////////////
 
-	res := Prescription{}
-	json.Unmarshal(prescripAsBytes, &res) //un stringify it aka JSON.parse()
-
-	res.Filled = true // set prescription to filled
-	fmt.Println("! set filled prescription to true")
-	fmt.Println(res)
-
-	res.Pharmacist = args[1]
-	fmt.Println("! set prescription pharmacist")
-	fmt.Println(res)
-
-	// update prescription and push back into blockchain
-	newPrescripAsBytes, _ := json.Marshal(res)
-	err = stub.PutState(args[0], newPrescripAsBytes) //rewrite the task with id as key
-	if err != nil {
-		return nil, err
-	}
+	//// 2. update prescription in PrescriptionList since we can't use pointers //////
+	// A: get all active tasks in marketplace									 /////
+	PrescripListAsBytes, err := stub.GetState(PrescriptionsListStr) //	 		 /////
+	if err != nil {                                                 // 			 /////
+		return nil, errors.New("Failed to get PrescriptionList") // 			 /////
+	} // 																		 /////
+	var pl PrescriptionList                  // 								 /////
+	json.Unmarshal(PrescripListAsBytes, &pl) //un stringify it aka JSON.parse()  /////
+	//																			 /////
+	fmt.Print("Prescription List: ") // 										 /////
+	fmt.Println(pl)                  // 										 /////
+	//																			 /////
+	// B: find prescription in list and update it								 /////
+	for i := range pl.List { //iter through all the tasks						 /////
+		fmt.Print("looking @ prescription: ") // 						 		 /////
+		fmt.Println(pl.List[i])               // 								 /////
+		//																		 /////
+		if pl.List[i].Uid == args[0] { // found the trade to update 			 /////
+			fmt.Println("Found prescription to fill") // 						 /////
+			//																	 /////
+			// t.modify_task(stub, []string{"add_submission", args[0], args[1]}) // add submission to single uid query
+			//																	 /////
+			pl.List[i].Filled = true                                        // 	 /////
+			pl.List[i].Pharmacist = args[1]                                 // 	 /////
+			fmt.Println("! filled prescription and added pharmacist pList") //	 /////
+			fmt.Println(pl.List[i].Filled)                                  //	 /////
+			fmt.Println(pl.List[i].Pharmacist)                              //	 /////
+			//																	 /////
+			// C: push filled prescription back into blockchain					 /////
+			jsonAsBytes, _ := json.Marshal(pl)                     //			 /////
+			err = stub.PutState(PrescriptionsListStr, jsonAsBytes) //rewrite the marketplace with new submission
+			if err != nil {                                        //	 		 /////
+				return nil, err //	 											 /////
+			} //	 															 /////
+			break //	 														 /////
+		} else if i == (len(pl.List) - 1) { //	 								 /////
+			return nil, errors.New("! Prescription not found in fill_prescription")
+		} //	 																 /////
+	} //	 																	 /////
+	//////////////////////////////////////////////////////////////////////////////////
 
 	fmt.Println("- end of fill_prescription")
 	return nil, nil
