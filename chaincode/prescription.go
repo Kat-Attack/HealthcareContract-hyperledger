@@ -79,9 +79,7 @@ func (t *SimpleAsset) Invoke(stub shim.ChaincodeStubInterface) peer.Response {
 	fmt.Println("invoke is running " + function)
 
 	// Handle different functions
-	if function == "write" {
-		return t.write(stub, args)
-	} else if function == "add_prescription" { // called by doctor
+	if function == "add_prescription" { // called by doctor
 		return t.add_prescription(stub, args)
 	} else if function == "fill_prescription" { // called by pharmacist
 		return t.fill_prescription(stub, args)
@@ -117,28 +115,6 @@ func (t *SimpleAsset) query(stub shim.ChaincodeStubInterface, args []string) pee
 	}
 
 	return shim.Success(valAsbytes)
-}
-
-// ============================================================================================================================
-// Write - Invoke function to write
-// ============================================================================================================================
-func (t *SimpleAsset) write(stub shim.ChaincodeStubInterface, args []string) peer.Response {
-	var key, value string
-	var err error
-	fmt.Println("running write()")
-
-	if len(args) != 2 {
-		return shim.Error("Incorrect number of arguments. Expecting 2: name of the key and value to set")
-	}
-
-	key = args[0] //rename for funsies
-	value = args[1]
-	err = stub.PutState(key, []byte(value)) //write the variable into the chaincode state
-	if err != nil {
-		return shim.Error("jSome errror")
-	}
-	return shim.Success(nil)
-
 }
 
 // ============================================================================================================================
